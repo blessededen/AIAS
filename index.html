@@ -126,9 +126,46 @@
     transition: max-height 0.35s ease, padding 0.35s ease;
   }
   .settings-panel.open {
-    max-height: 300px;
+    max-height: 500px;
     padding: 16px 24px;
   }
+  .preset-section { margin-bottom: 4px; }
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .preset-btn {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: inherit;
+  }
+  .preset-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+  }
+  .preset-btn.active {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.15);
+    color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .preset-icon { font-size: 22px; }
+  .preset-name { font-size: 12px; font-weight: 600; }
+  .preset-desc {
+    font-size: 9px; color: var(--text-dim);
+    text-align: center; line-height: 1.3;
+  }
+  .preset-btn.active .preset-desc { color: var(--accent); }
   .settings-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -487,6 +524,7 @@
     .input-area { padding: 12px 16px 16px; }
     .message { max-width: 92%; }
     .settings-grid { grid-template-columns: 1fr; }
+    .preset-grid { grid-template-columns: repeat(3, 1fr); }
     .welcome h2 { font-size: 18px; }
   }
 </style>
@@ -526,7 +564,42 @@
 
 <!-- Settings -->
 <div class="settings-panel" id="settingsPanel">
-  <div class="settings-grid">
+  <div class="preset-section">
+    <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">🎭 보이스 프리셋</label>
+    <div class="preset-grid">
+      <button class="preset-btn" onclick="applyPreset('chipmunk')" id="preset-chipmunk">
+        <span class="preset-icon">🐿️</span>
+        <span class="preset-name">다람쥐</span>
+        <span class="preset-desc">초고속 하이피치 재잘재잘</span>
+      </button>
+      <button class="preset-btn" onclick="applyPreset('cute')" id="preset-cute">
+        <span class="preset-icon">🧸</span>
+        <span class="preset-name">귀요미</span>
+        <span class="preset-desc">높고 빠른 애교톤</span>
+      </button>
+      <button class="preset-btn" onclick="applyPreset('normal')" id="preset-normal">
+        <span class="preset-icon">🙂</span>
+        <span class="preset-name">기본</span>
+        <span class="preset-desc">자연스러운 목소리</span>
+      </button>
+      <button class="preset-btn" onclick="applyPreset('calm')" id="preset-calm">
+        <span class="preset-icon">🧘</span>
+        <span class="preset-name">차분</span>
+        <span class="preset-desc">느긋하고 낮은 톤</span>
+      </button>
+      <button class="preset-btn" onclick="applyPreset('deep')" id="preset-deep">
+        <span class="preset-icon">🎸</span>
+        <span class="preset-name">저음</span>
+        <span class="preset-desc">묵직한 낮은 목소리</span>
+      </button>
+      <button class="preset-btn" onclick="applyPreset('robot')" id="preset-robot">
+        <span class="preset-icon">🤖</span>
+        <span class="preset-name">로봇</span>
+        <span class="preset-desc">빠르고 단조로운 톤</span>
+      </button>
+    </div>
+  </div>
+  <div class="settings-grid" style="margin-top:14px;">
     <div class="setting-group">
       <label>음성 선택</label>
       <select id="voiceSelect"></select>
@@ -541,14 +614,14 @@
       </select>
     </div>
     <div class="setting-group">
-      <label>음성 속도</label>
-      <input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1">
-      <div class="range-label"><span>느림</span><span id="rateVal">1.0</span><span>빠름</span></div>
+      <label>음성 속도 <span id="rateEmoji">🚶</span></label>
+      <input type="range" id="speechRate" min="0.3" max="3" step="0.1" value="1">
+      <div class="range-label"><span>🐢 0.3</span><span id="rateVal">1.0</span><span>3.0 🐇</span></div>
     </div>
     <div class="setting-group">
-      <label>음성 높낮이</label>
-      <input type="range" id="speechPitch" min="0.5" max="2" step="0.1" value="1">
-      <div class="range-label"><span>낮음</span><span id="pitchVal">1.0</span><span>높음</span></div>
+      <label>음성 높낮이 <span id="pitchEmoji">🎵</span></label>
+      <input type="range" id="speechPitch" min="0" max="2" step="0.1" value="1">
+      <div class="range-label"><span>🔈 낮음</span><span id="pitchVal">1.0</span><span>높음 🔊</span></div>
     </div>
   </div>
 </div>
@@ -597,6 +670,60 @@ let isRecording = false;
 let isSpeaking = false;
 let recognition = null;
 let currentUtterance = null;
+let currentPreset = 'normal';
+
+// ── Presets ──
+const PRESETS = {
+  chipmunk: { rate: 2.8, pitch: 2.0, label: '🐿️ 다람쥐', personality: '극도로 흥분해서 재잘재잘 빠르게 말하는 다람쥐 캐릭터처럼 답변하세요. 짧고 빠른 문장을 연달아 사용하고, 감탄사를 많이 쓰고, 에너지가 넘치게 말하세요! 문장 끝에 "~!", "~!!", "헤헤", "우와" 같은 표현을 자주 쓰세요.' },
+  cute: { rate: 1.8, pitch: 1.7, label: '🧸 귀요미', personality: '귀엽고 애교 넘치는 말투로 답변하세요. "~요", "~용", "~당" 같은 귀여운 어미를 사용하고, 밝고 경쾌하게 말하세요. 이모티콘 표현처럼 말해주세요.' },
+  normal: { rate: 1.0, pitch: 1.0, label: '🙂 기본', personality: '친절하고 자연스러운 구어체로 답변하세요.' },
+  calm: { rate: 0.8, pitch: 0.8, label: '🧘 차분', personality: '매우 차분하고 느긋한 톤으로 답변하세요. 천천히 생각하며 말하는 느낌으로, 편안하고 안정감 있게 말하세요. 짧은 호흡의 문장을 사용하세요.' },
+  deep: { rate: 0.7, pitch: 0.3, label: '🎸 저음', personality: '묵직하고 낮은 톤의 캐릭터처럼 답변하세요. 간결하고 무게감 있게 말하고, 불필요한 말은 하지 마세요. 진중한 느낌으로.' },
+  robot: { rate: 1.6, pitch: 0.5, label: '🤖 로봇', personality: '로봇처럼 단조롭고 기계적인 말투로 답변하세요. "삐빅. 분석 완료.", "처리 중..." 같은 표현을 섞어 쓰고, 감정 없이 정보 전달 위주로 말하세요.' }
+};
+
+function applyPreset(name) {
+  currentPreset = name;
+  const p = PRESETS[name];
+  $('speechRate').value = p.rate;
+  $('speechPitch').value = p.pitch;
+  $('rateVal').textContent = p.rate.toFixed(1);
+  $('pitchVal').textContent = p.pitch.toFixed(1);
+  updateRateEmoji(p.rate);
+  updatePitchEmoji(p.pitch);
+  
+  // Highlight active preset
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById(`preset-${name}`);
+  if (activeBtn) activeBtn.classList.add('active');
+  
+  // Preview voice with a short sample
+  stopSpeech();
+  const samples = {
+    chipmunk: '안녕안녕!! 나 다람쥐야! 엄청 빠르지?! 헤헤!',
+    cute: '안녕하세용~ 귀여운 목소리 어때요~?',
+    normal: '안녕하세요, 기본 목소리입니다.',
+    calm: '안녕하세요... 차분하게... 말해볼게요.',
+    deep: '안녕하세요. 낮은 목소리입니다.',
+    robot: '삐빅. 로봇 모드. 가동 완료.'
+  };
+  speak(samples[name] || '음성 변경 완료');
+}
+
+function updateRateEmoji(val) {
+  const e = $('rateEmoji');
+  if (val >= 2.0) e.textContent = '⚡';
+  else if (val >= 1.5) e.textContent = '🏃';
+  else if (val >= 0.9) e.textContent = '🚶';
+  else e.textContent = '🐢';
+}
+function updatePitchEmoji(val) {
+  const e = $('pitchEmoji');
+  if (val >= 1.7) e.textContent = '🐿️';
+  else if (val >= 1.2) e.textContent = '🎵';
+  else if (val >= 0.8) e.textContent = '🎤';
+  else e.textContent = '🔈';
+}
 
 // ── Elements ──
 const $ = id => document.getElementById(id);
@@ -623,6 +750,8 @@ window.addEventListener('load', () => {
   initVoices();
   initVisualizer();
   initSpeechRecognition();
+  // Default preset highlight
+  document.getElementById('preset-normal')?.classList.add('active');
 });
 
 // Save API Key
@@ -645,10 +774,18 @@ $('settingsBtn').addEventListener('click', () => {
 
 // Rate & Pitch labels
 $('speechRate').addEventListener('input', e => {
-  $('rateVal').textContent = parseFloat(e.target.value).toFixed(1);
+  const val = parseFloat(e.target.value);
+  $('rateVal').textContent = val.toFixed(1);
+  updateRateEmoji(val);
+  currentPreset = 'custom';
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
 });
 $('speechPitch').addEventListener('input', e => {
-  $('pitchVal').textContent = parseFloat(e.target.value).toFixed(1);
+  const val = parseFloat(e.target.value);
+  $('pitchVal').textContent = val.toFixed(1);
+  updatePitchEmoji(val);
+  currentPreset = 'custom';
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
 });
 
 // ── Voice Init ──
@@ -903,7 +1040,10 @@ async function sendMessage(text) {
 - 답변을 간결하고 자연스럽게 해주세요 (2-4문장 권장)
 - 음성으로 읽기 좋은 자연스러운 구어체를 사용하세요
 - 복잡한 마크다운이나 코드보다는 설명 위주로 답변하세요
-- 한국어로 답변하되, 필요하면 다른 언어도 사용하세요` }]
+- 한국어로 답변하되, 필요하면 다른 언어도 사용하세요
+
+[현재 캐릭터 모드: ${PRESETS[currentPreset]?.label || '기본'}]
+${PRESETS[currentPreset]?.personality || ''}` }]
         },
         contents: geminiHistory,
         generationConfig: {
@@ -972,4 +1112,3 @@ function sendQuick(text) {
 </script>
 </body>
 </html>
-
